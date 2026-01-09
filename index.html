@@ -8,14 +8,15 @@
 <style>
   body { font-family: Arial, sans-serif; background: #1a1a1a; color: #f0f0f0; padding: 20px; }
   .login, .app { max-width: 450px; margin: 30px auto; padding: 20px; background: #2a2a2a; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-  input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; }
-  input { border: 1px solid #555; background: #1a1a1a; color: #f0f0f0; }
+  input, button, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; }
+  input, select { border: 1px solid #555; background: #1a1a1a; color: #f0f0f0; }
   button { border: none; background: #00c8ff; color: black; font-weight: bold; cursor: pointer; }
   button:hover { background: #0096b3; }
   h2, h3 { text-align: center; }
   #wallet { font-weight: bold; color: #00ff9c; }
-  #txMessage, #generatedLink { word-break: break-all; text-align: center; margin-top: 10px; }
+  #txMessage, #generatedLink, #receivedMessage { word-break: break-all; text-align: center; margin-top: 10px; }
   #qrCode { text-align:center; margin-top:10px; }
+  .shop-item { padding:10px; border:1px solid #555; margin:5px 0; border-radius:5px; background:#1f1f1f; }
 </style>
 </head>
 <body>
@@ -23,8 +24,14 @@
 <!-- LOGIN -->
 <div class="login" id="loginDiv">
   <h2>CYBER WÄHRUNG APP</h2>
-  <input type="password" id="password" placeholder="Passwort eingeben">
-  <button onclick="checkPassword()">Login</button>
+  <div id="setPasswordDiv" style="display:none;">
+    <input type="password" id="newPassword" placeholder="Neues Passwort erstellen">
+    <button onclick="savePassword()">Passwort setzen</button>
+  </div>
+  <div id="enterPasswordDiv" style="display:none;">
+    <input type="password" id="password" placeholder="Passwort eingeben">
+    <button onclick="checkPassword()">Login</button>
+  </div>
   <p id="loginMessage" style="color:red;"></p>
 </div>
 
@@ -33,12 +40,14 @@
   <h2>Willkommen!</h2>
   <p>Dein CYBER-Guthaben: <span id="wallet">1000</span> CYBER</p>
 
+  <h3>Shop</h3>
+  <div id="shop"></div>
+
   <h3>Transaktion senden</h3>
   <input type="text" id="receiver" placeholder="Empfänger-Name">
   <input type="number" id="amount" placeholder="Betrag">
   <button onclick="sendCyber()">Transaktion generieren</button>
   <p id="txMessage" style="color:#00ff9c;"></p>
-
   <div id="qrCode"></div>
   <button onclick="downloadQRCode()">QR-Code herunterladen</button>
 
@@ -56,15 +65,39 @@
 <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
 
 <script>
-const PASSWORD_HASH = "5f4dcc3b5aa765d61d8327deb882cf99"; // Passwort MD5 ändern!
-let wallet = 1000;
+let wallet = localStorage.getItem('cyberWallet') ? Number(localStorage.getItem('cyberWallet')) : 1000;
 let currentTxData = "";
 
-// LOGIN
+// Passwort-Setup beim Start
+window.onload = function() {
+  const savedHash = localStorage.getItem('cyberPassword');
+  if(!savedHash) {
+    document.getElementById('setPasswordDiv').style.display = "block";
+  } else {
+    document.getElementById('enterPasswordDiv').style.display = "block";
+  }
+  updateWallet();
+  loadShop();
+};
+
+// MD5 Funktion
 function md5(string) { return CryptoJS.MD5(string).toString(); }
+
+// Passwort speichern
+function savePassword() {
+  const pwd = document.getElementById("newPassword").value;
+  if(!pwd) { document.getElementById("loginMessage").innerText = "Bitte Passwort eingeben"; return;}
+  localStorage.setItem('cyberPassword', md5(pwd));
+  document.getElementById('setPasswordDiv').style.display = "none";
+  document.getElementById('enterPasswordDiv').style.display = "block";
+  document.getElementById("loginMessage").innerText = "Passwort gespeichert! Bitte anmelden.";
+}
+
+// Passwort prüfen
 function checkPassword() {
   const pwd = document.getElementById("password").value;
-  if(md5(pwd) === PASSWORD_HASH) {
+  const savedHash = localStorage.getItem('cyberPassword');
+  if(md5(pwd) === savedHash) {
     document.getElementById("loginDiv").style.display = "none";
     document.getElementById("appDiv").style.display = "block";
     updateWallet();
@@ -84,39 +117,38 @@ function logout() {
   document.getElementById("loginDiv").style.display = "block";
 }
 
-// WALLET
+// WALLET UPDATE
 function updateWallet() {
   document.getElementById("wallet").innerText = wallet;
+  localStorage.setItem('cyberWallet', wallet);
 }
 
-// TRANSAKTION GENERIEREN
+// TRANSAKTIONEN
 function sendCyber() {
   const receiver = document.getElementById("receiver").value.trim();
   const amount = Number(document.getElementById("amount").value);
-  if(!receiver || amount <=0) { document.getElementById("txMessage").innerText = "Empfänger und Betrag korrekt eingeben!"; return;}
-  if(amount > wallet) { document.getElementById("txMessage").innerText = "Nicht genügend CYBER!"; return;}
+  if(!receiver || amount<=0) { document.getElementById("txMessage").innerText="Empfänger und Betrag korrekt eingeben!"; return;}
+  if(amount>wallet) { document.getElementById("txMessage").innerText="Nicht genügend CYBER!"; return;}
 
   wallet -= amount;
   updateWallet();
-
   currentTxData = JSON.stringify({receiver, amount});
   document.getElementById("txMessage").innerText = `Transaktion erstellt für ${receiver}, ${amount} CYBER`;
 
-  // QR-Code generieren
   document.getElementById("qrCode").innerHTML = "";
   new QRCode(document.getElementById("qrCode"), {
     text: currentTxData,
-    width: 200,
-    height: 200,
-    colorDark: "#00ff9c",
-    colorLight: "#1a1a1a"
+    width:200,
+    height:200,
+    colorDark:"#00ff9c",
+    colorLight:"#1a1a1a"
   });
 }
 
 // QR-CODE DOWNLOAD
 function downloadQRCode() {
   const qrCanvas = document.querySelector('#qrCode canvas');
-  if(!qrCanvas) { alert("Bitte zuerst eine Transaktion erstellen!"); return; }
+  if(!qrCanvas) { alert("Bitte zuerst eine Transaktion erstellen!"); return;}
   const link = document.createElement("a");
   link.href = qrCanvas.toDataURL();
   link.download = "CYBER_Transaktion.png";
@@ -126,30 +158,64 @@ function downloadQRCode() {
 // QR-CODE LESEN
 function readQRCode() {
   const file = document.getElementById("qrUpload").files[0];
-  if(!file) { alert("Bitte QR-Code Bild auswählen"); return; }
-
+  if(!file) { alert("Bitte QR-Code Bild auswählen"); return;}
   const reader = new FileReader();
-  reader.onload = function() {
+  reader.onload = function(){
     const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width; canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
+    img.onload=function(){
+      const canvas=document.createElement("canvas");
+      canvas.width=img.width; canvas.height=img.height;
+      const ctx=canvas.getContext("2d");
       ctx.drawImage(img,0,0);
-      const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
       const code = jsQR(imageData.data, canvas.width, canvas.height);
-      if(code) {
+      if(code){
         const data = JSON.parse(code.data);
         wallet += Number(data.amount);
         updateWallet();
-        document.getElementById("receivedMessage").innerText = `Empfangen: ${data.amount} CYBER von ${data.receiver}`;
+        document.getElementById("receivedMessage").innerText=`Empfangen: ${data.amount} CYBER von ${data.receiver}`;
       } else {
-        document.getElementById("receivedMessage").innerText = "Kein gültiger QR-Code erkannt!";
+        document.getElementById("receivedMessage").innerText="Kein gültiger QR-Code erkannt!";
       }
     }
     img.src = reader.result;
   }
   reader.readAsDataURL(file);
+}
+
+// SHOP
+const shopItems = [
+  {name:"Cyber T-Shirt", price:100},
+  {name:"Cyber Sticker", price:25},
+  {name:"Cyber Mug", price:50}
+];
+
+function loadShop(){
+  const shopDiv=document.getElementById("shop");
+  shopDiv.innerHTML="";
+  shopItems.forEach((item,i)=>{
+    const div=document.createElement("div");
+    div.className="shop-item";
+    div.innerHTML=`${item.name} - ${item.price} CYBER <button onclick="buyItem(${i})">Kaufen</button>`;
+    shopDiv.appendChild(div);
+  });
+}
+
+function buyItem(index){
+  const item = shopItems[index];
+  if(wallet<item.price){ alert("Nicht genügend CYBER!"); return;}
+  wallet -= item.price;
+  updateWallet();
+  currentTxData = JSON.stringify({receiver: item.name, amount: item.price});
+  document.getElementById("txMessage").innerText = `Artikel gekauft: ${item.name} für ${item.price} CYBER`;
+  document.getElementById("qrCode").innerHTML = "";
+  new QRCode(document.getElementById("qrCode"), {
+    text: currentTxData,
+    width:200,
+    height:200,
+    colorDark:"#00ff9c",
+    colorLight:"#1a1a1a"
+  });
 }
 </script>
 </body>
