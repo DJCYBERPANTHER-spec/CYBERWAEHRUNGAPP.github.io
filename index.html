@@ -6,17 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CYBER WÄHRUNG APP</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #1a1a1a; color: #f0f0f0; padding: 20px; }
-  .login, .app { max-width: 450px; margin: 30px auto; padding: 20px; background: #2a2a2a; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-  input, button, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; }
-  input, select { border: 1px solid #555; background: #1a1a1a; color: #f0f0f0; }
-  button { border: none; background: #00c8ff; color: black; font-weight: bold; cursor: pointer; }
-  button:hover { background: #0096b3; }
-  h2, h3 { text-align: center; }
-  #wallet { font-weight: bold; color: #00ff9c; }
-  #txMessage, #generatedLink, #receivedMessage { word-break: break-all; text-align: center; margin-top: 10px; }
-  #qrCode { text-align:center; margin-top:10px; }
-  .shop-item { padding:10px; border:1px solid #555; margin:5px 0; border-radius:5px; background:#1f1f1f; }
+body { font-family: Arial, sans-serif; background: #1a1a1a; color: #f0f0f0; padding: 20px; }
+.login, .app { max-width: 450px; margin: 30px auto; padding: 20px; background: #2a2a2a; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; }
+input { border: 1px solid #555; background: #1a1a1a; color: #f0f0f0; }
+button { border: none; background: #00c8ff; color: black; font-weight: bold; cursor: pointer; }
+button:hover { background: #0096b3; }
+h2, h3 { text-align: center; }
+#wallet { font-weight: bold; color: #00ff9c; }
+#txMessage, #generatedLink, #receivedMessage { word-break: break-all; text-align: center; margin-top: 10px; }
+#qrCode { text-align:center; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -25,7 +24,7 @@
 <div class="login" id="loginDiv">
   <h2>CYBER WÄHRUNG APP</h2>
   <div id="setPasswordDiv" style="display:none;">
-    <input type="password" id="newPassword" placeholder="Neues Passwort erstellen">
+    <input type="password" id="newPassword" placeholder="Eigenes Passwort erstellen">
     <button onclick="savePassword()">Passwort setzen</button>
   </div>
   <div id="enterPasswordDiv" style="display:none;">
@@ -40,14 +39,12 @@
   <h2>Willkommen!</h2>
   <p>Dein CYBER-Guthaben: <span id="wallet">1000</span> CYBER</p>
 
-  <h3>Shop</h3>
-  <div id="shop"></div>
-
   <h3>Transaktion senden</h3>
   <input type="text" id="receiver" placeholder="Empfänger-Name">
   <input type="number" id="amount" placeholder="Betrag">
   <button onclick="sendCyber()">Transaktion generieren</button>
   <p id="txMessage" style="color:#00ff9c;"></p>
+
   <div id="qrCode"></div>
   <button onclick="downloadQRCode()">QR-Code herunterladen</button>
 
@@ -77,7 +74,6 @@ window.onload = function() {
     document.getElementById('enterPasswordDiv').style.display = "block";
   }
   updateWallet();
-  loadShop();
 };
 
 // MD5 Funktion
@@ -181,41 +177,6 @@ function readQRCode() {
     img.src = reader.result;
   }
   reader.readAsDataURL(file);
-}
-
-// SHOP
-const shopItems = [
-  {name:"Cyber T-Shirt", price:100},
-  {name:"Cyber Sticker", price:25},
-  {name:"Cyber Mug", price:50}
-];
-
-function loadShop(){
-  const shopDiv=document.getElementById("shop");
-  shopDiv.innerHTML="";
-  shopItems.forEach((item,i)=>{
-    const div=document.createElement("div");
-    div.className="shop-item";
-    div.innerHTML=`${item.name} - ${item.price} CYBER <button onclick="buyItem(${i})">Kaufen</button>`;
-    shopDiv.appendChild(div);
-  });
-}
-
-function buyItem(index){
-  const item = shopItems[index];
-  if(wallet<item.price){ alert("Nicht genügend CYBER!"); return;}
-  wallet -= item.price;
-  updateWallet();
-  currentTxData = JSON.stringify({receiver: item.name, amount: item.price});
-  document.getElementById("txMessage").innerText = `Artikel gekauft: ${item.name} für ${item.price} CYBER`;
-  document.getElementById("qrCode").innerHTML = "";
-  new QRCode(document.getElementById("qrCode"), {
-    text: currentTxData,
-    width:200,
-    height:200,
-    colorDark:"#00ff9c",
-    colorLight:"#1a1a1a"
-  });
 }
 </script>
 </body>
